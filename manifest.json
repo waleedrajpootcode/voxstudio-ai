@@ -1,0 +1,15 @@
+{
+  "name": "VoxStudio AI — Voice Suite",
+  "short_name": "VoxStudio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06080F",
+  "theme_color": "#8B5CF6",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3039/3039383.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
