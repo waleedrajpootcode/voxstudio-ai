@@ -108,14 +108,15 @@ function applySample(type) {
     filterVoices();
 }
 
+// --- Bulletproof Audio Synthesis (Works on GitHub Pages & Mobile) ---
 async function generateSpeech() {
     const text = ttsInput.value.trim();
     const voice = document.getElementById('tts-voice-select').value;
-    const speed = speedSlider.value;
-    const pitch = pitchSlider.value;
+    const speed = parseFloat(speedSlider.value);
+    const pitch = parseFloat(pitchSlider.value);
 
     if (!text) {
-        alert("Please enter text to synthesize!");
+        alert("Pehle kuch text likhein!");
         return;
     }
 
@@ -130,44 +131,77 @@ async function generateSpeech() {
     btnText.style.display = 'none';
     spinner.style.display = 'block';
 
-    const formData = new FormData();
-    formData.append("text", text);
-    formData.append("voice", voice);
-    formData.append("speed", speed);
-    formData.append("pitch", pitch);
-
     try {
-        let audioUrl = "";
-        try {
-            // Pehle local Python backend ko call karein
-            const res = await fetch('/api/tts', { method: 'POST', body: formData });
-            if (res.ok) {
-                const blob = await res.blob();
-                audioUrl = URL.createObjectURL(blob);
-            } else {
-                throw new Error("Serverless mode");
-            }
-        } catch {
-            // Agar GitHub Pages par ho (jahan Python nahi hota), toh Direct Neural Cloud stream karein:
-            const langCode = voice.startsWith("ur") ? "ur" : (voice.startsWith("hi") ? "hi" : "en");
-            audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${langCode}&q=${encodeURIComponent(text)}`;
-        }
+        // Language detection
+        let langCode = "en";
+        if (voice.startsWith("ur") || /[\u0600-\u06FF]/.test(text)) langCode = "ur";
+        else if (voice.startsWith("hi") || /[\u0900-\u097F]/.test(text)) langCode = "hi";
+
+        // Direct Ultra-Fast Neural Stream
+        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${langCode}&q=${encodeURIComponent(text)}`;
 
         mainAudio.src = audioUrl;
         downloadBtn.href = audioUrl;
         playerContainer.style.display = 'block';
-        mainAudio.play();
-        setupVisualizer(mainAudio);
+
+        // Native Browser Voice Backup (For Instant Mobile Playback)
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = langCode === 'ur' ? 'ur-PK' : (langCode === 'hi' ? 'hi-IN' : 'en-US');
+            utterance.rate = Math.max(0.5, Math.min(2.0, 1 + (speed / 50)));
+            utterance.pitch = Math.max(0.5, Math.min(2.0, 1 + (pitch / 50)));
+
+            // Play via native engine
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // Also start audio player element
+        mainAudio.play().catch(e => console.log("Audio tag auto-play blocked, user can click play:", e));
+
+        // Start Live Visualizer
+        startVisualizerAnimation();
 
         saveToHistory(text, voice, audioUrl);
 
     } catch (err) {
-        alert("Generation Error: " + err.message);
+        alert("Audio error: " + err.message);
     } finally {
         btn.disabled = false;
         btnText.style.display = 'block';
         spinner.style.display = 'none';
     }
+}
+
+// Visualizer that never crashes or blocks audio
+let visualizerInterval;
+function startVisualizerAnimation() {
+    const canvas = document.getElementById('audio-visualizer');
+    const ctx = canvas.getContext('2d');
+    clearInterval(visualizerInterval);
+
+    let frame = 0;
+    visualizerInterval = setInterval(() => {
+        frame++;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const bars = 40;
+        const width = canvas.width / bars;
+
+        for (let i = 0; i < bars; i++) {
+            const height = Math.abs(Math.sin((frame + i) * 0.2)) * (canvas.height - 10) + 5;
+            const x = i * width;
+            const y = canvas.height - height;
+
+            const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            grad.addColorStop(0, '#06B6D4');
+            grad.addColorStop(1, '#8B5CF6');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(x, y, width - 2, height);
+        }
+
+        if (frame > 120) clearInterval(visualizerInterval); // stop after 4-5 seconds
+    }, 40);
 }
 
 // --- Real Web Audio Visualizer ---
