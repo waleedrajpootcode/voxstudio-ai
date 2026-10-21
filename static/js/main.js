@@ -108,15 +108,14 @@ function applySample(type) {
     filterVoices();
 }
 
-// --- Bulletproof Audio Synthesis (Works on GitHub Pages & Mobile) ---
 async function generateSpeech() {
     const text = ttsInput.value.trim();
     const voice = document.getElementById('tts-voice-select').value;
-    const speed = parseFloat(speedSlider.value);
-    const pitch = parseFloat(pitchSlider.value);
+    const speed = speedSlider.value;
+    const pitch = pitchSlider.value;
 
     if (!text) {
-        alert("Pehle kuch text likhein!");
+        alert("Pehle kuch text enter karein!");
         return;
     }
 
@@ -131,41 +130,38 @@ async function generateSpeech() {
     btnText.style.display = 'none';
     spinner.style.display = 'block';
 
-    try {
-        // Language detection
-        let langCode = "en";
-        if (voice.startsWith("ur") || /[\u0600-\u06FF]/.test(text)) langCode = "ur";
-        else if (voice.startsWith("hi") || /[\u0900-\u097F]/.test(text)) langCode = "hi";
+    const formData = new FormData();
+    formData.append("text", text);
+    formData.append("voice", voice);
+    formData.append("speed", speed);
+    formData.append("pitch", pitch);
 
-        // Direct Ultra-Fast Neural Stream
-        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${langCode}&q=${encodeURIComponent(text)}`;
+    try {
+        const res = await fetch('/api/tts', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Audio generation failed");
+        }
+
+        // Asli MP3 blob backend se receive karein
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
 
         mainAudio.src = audioUrl;
         downloadBtn.href = audioUrl;
+        downloadBtn.download = "voxstudio_audio.mp3";
         playerContainer.style.display = 'block';
 
-        // Native Browser Voice Backup (For Instant Mobile Playback)
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = langCode === 'ur' ? 'ur-PK' : (langCode === 'hi' ? 'hi-IN' : 'en-US');
-            utterance.rate = Math.max(0.5, Math.min(2.0, 1 + (speed / 50)));
-            utterance.pitch = Math.max(0.5, Math.min(2.0, 1 + (pitch / 50)));
-
-            // Play via native engine
-            window.speechSynthesis.speak(utterance);
-        }
-
-        // Also start audio player element
-        mainAudio.play().catch(e => console.log("Audio tag auto-play blocked, user can click play:", e));
-
-        // Start Live Visualizer
+        mainAudio.play();
         startVisualizerAnimation();
-
         saveToHistory(text, voice, audioUrl);
 
     } catch (err) {
-        alert("Audio error: " + err.message);
+        alert("Studio Error: " + err.message);
     } finally {
         btn.disabled = false;
         btnText.style.display = 'block';
