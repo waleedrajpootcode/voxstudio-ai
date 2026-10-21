@@ -108,7 +108,6 @@ function applySample(type) {
     filterVoices();
 }
 
-// --- Synthesize Speech ---
 async function generateSpeech() {
     const text = ttsInput.value.trim();
     const voice = document.getElementById('tts-voice-select').value;
@@ -138,26 +137,32 @@ async function generateSpeech() {
     formData.append("pitch", pitch);
 
     try {
-        const res = await fetch('/api/tts', {
-            method: 'POST',
-            body: formData
-        });
+        let audioUrl = "";
+        try {
+            // Pehle local Python backend ko call karein
+            const res = await fetch('/api/tts', { method: 'POST', body: formData });
+            if (res.ok) {
+                const blob = await res.blob();
+                audioUrl = URL.createObjectURL(blob);
+            } else {
+                throw new Error("Serverless mode");
+            }
+        } catch {
+            // Agar GitHub Pages par ho (jahan Python nahi hota), toh Direct Neural Cloud stream karein:
+            const langCode = voice.startsWith("ur") ? "ur" : (voice.startsWith("hi") ? "hi" : "en");
+            audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${langCode}&q=${encodeURIComponent(text)}`;
+        }
 
-        if (!res.ok) throw new Error("Generation failed");
-
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-
-        mainAudio.src = url;
-        downloadBtn.href = url;
+        mainAudio.src = audioUrl;
+        downloadBtn.href = audioUrl;
         playerContainer.style.display = 'block';
         mainAudio.play();
         setupVisualizer(mainAudio);
 
-        saveToHistory(text, voice, url);
+        saveToHistory(text, voice, audioUrl);
 
     } catch (err) {
-        alert("Audio Generation Error: " + err.message);
+        alert("Generation Error: " + err.message);
     } finally {
         btn.disabled = false;
         btnText.style.display = 'block';
