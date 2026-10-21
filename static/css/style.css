@@ -456,3 +456,47 @@ audio { width: 100%; margin-bottom: 12px; }
     display: block;
     margin-top: 6px;
 }
+/* ========================================================
+   FIX MOBILE HORIZONTAL OVERFLOW (Add at the very end)
+======================================================== */
+html, body {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+    position: relative;
+}
+
+.ambient-glow {
+    max-width: 80vw !important;
+}
+
+canvas, audio, .app-layout, .glass-container, textarea {
+    max-width: 100% !important;
+}
+
+@media (max-width: 640px) {
+    .app-layout {
+        padding: 16px 10px !important;
+    }
+
+    .controls-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .mode-btn {
+        font-size: 0.8rem !important;
+        padding: 8px 4px !important;
+    }
+
+    .stt-export-actions {
+        flex-direction: column !important;
+    }
+
+    .export-btn {
+        width: 100% !important;
+    }
+
+    .history-drawer {
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+}

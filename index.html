@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoxStudio AI — Master Voice Suite</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8B5CF6">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <div class="app-layout">
+        <!-- Top Navbar -->
+        <nav class="top-nav">
+            <div class="brand">
+                <span class="brand-logo">⚡</span>
+                <span class="brand-name">VoxStudio <span>AI</span></span>
+                <span class="badge">SAAS PRO</span>
+            </div>
+            <div class="nav-actions">
+                <button id="pwa-install-btn" class="install-btn" style="display:none;" onclick="installPWA()">
+                    📲 Install App
+                </button>
+                <button class="icon-btn" onclick="toggleHistoryDrawer()" title="View History">
+                    📁 History (<span id="history-count">0</span>)
+                </button>
+            </div>
+        </nav>
+
+        <!-- Studio Hub -->
+        <main class="studio-main">
+            <!-- Mode Switcher Tabs -->
+            <div class="mode-tabs">
+                <button class="mode-btn active" id="tab-tts" onclick="switchMode('tts')">
+                    🎙️ Text-to-Speech
+                </button>
+                <button class="mode-btn" id="tab-stt" onclick="switchMode('stt')">
+                    ⚡ Voice-to-Text
+                </button>
+            </div>
+
+            <!-- TTS PANEL -->
+            <section id="panel-tts" class="glass-container">
+                <div class="chips-row">
+                    <span class="chip-label">Quick Prompts:</span>
+                    <button class="prompt-chip" onclick="applySample('urdu')">🇵🇰 Urdu Motivation</button>
+                    <button class="prompt-chip" onclick="applySample('hindi')">🇮🇳 Hindi Narrative</button>
+                    <button class="prompt-chip" onclick="applySample('english')">🇺🇸 Tech News</button>
+                </div>
+
+                <div class="textarea-wrapper">
+                    <textarea id="tts-input" placeholder="Enter script here in English, Urdu (اردو), or Hindi (हिंदी)..." maxlength="5000"></textarea>
+                    <div class="textarea-footer">
+                        <span id="char-counter">0 / 5000 chars</span>
+                        <span id="est-time">Est. 0s</span>
+                    </div>
+                </div>
+
+                <div class="controls-grid">
+                    <div class="control-card">
+                        <label>Language Filter</label>
+                        <select id="voice-lang-filter" onchange="filterVoices()">
+                            <option value="all">🌍 All Languages (400+)</option>
+                            <option value="ur" selected>🇵🇰 Urdu (Pakistan)</option>
+                            <option value="hi">🇮🇳 Hindi (India)</option>
+                            <option value="en">🇺🇸/🇬🇧 English (Global)</option>
+                            <option value="ar">🇸🇦 Arabic</option>
+                            <option value="tr">🇹🇷 Turkish</option>
+                        </select>
+                    </div>
+
+                    <div class="control-card">
+                        <label>Neural Voice Artist</label>
+                        <select id="tts-voice-select"></select>
+                    </div>
+
+                    <div class="control-card">
+                        <div class="slider-header">
+                            <label>Speed (Tempo)</label>
+                            <span id="speed-label">0%</span>
+                        </div>
+                        <input type="range" id="tts-speed" min="-50" max="50" value="0" step="5">
+                    </div>
+
+                    <div class="control-card">
+                        <div class="slider-header">
+                            <label>Pitch Tuning</label>
+                            <span id="pitch-label">0 Hz</span>
+                        </div>
+                        <input type="range" id="tts-pitch" min="-50" max="50" value="0" step="5">
+                    </div>
+                </div>
+
+                <button class="generate-cta" id="generate-cta-btn" onclick="generateSpeech()">
+                    <span class="btn-text">⚡ Synthesize Studio Audio</span>
+                    <div class="spinner" id="gen-spinner"></div>
+                </button>
+
+                <div id="output-player-container" class="output-player-container">
+                    <div class="player-top">
+                        <span class="status-indicator">● LIVE AUDIO READY</span>
+                        <div class="player-meta-tags">
+                            <span id="meta-voice-tag">Voice: Studio Neural</span>
+                        </div>
+                    </div>
+
+                    <canvas id="audio-visualizer" height="60"></canvas>
+                    <audio id="main-audio" controls crossorigin="anonymous"></audio>
+
+                    <div class="player-actions">
+                        <a id="download-action-btn" class="download-action-btn" download="voxstudio_audio.mp3">
+                            ⬇️ Download HD MP3
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STT PANEL -->
+            <section id="panel-stt" class="glass-container" style="display:none;">
+                <div class="stt-subtabs">
+                    <button class="subtab-btn active" id="subtab-mic" onclick="switchSTTMode('mic')">🎙️ Live Mic</button>
+                    <button class="subtab-btn" id="subtab-upload" onclick="switchSTTMode('upload')">📁 Upload File</button>
+                </div>
+
+                <div class="controls-grid" style="grid-template-columns: 1fr; margin-bottom:15px;">
+                    <div class="control-card">
+                        <label>Target Audio Language</label>
+                        <select id="stt-lang-select">
+                            <option value="ur-PK">🇵🇰 Urdu (Pakistan - اردو)</option>
+                            <option value="hi-IN">🇮🇳 Hindi (India - हिंदी)</option>
+                            <option value="en-US" selected>🇺🇸 English (US)</option>
+                            <option value="en-GB">🇬🇧 English (UK)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="stt-mic-view">
+                    <div class="mic-hub">
+                        <button class="mic-circle" id="mic-main-btn" onclick="toggleLiveTranscription()">🎙️</button>
+                        <p id="mic-status-msg">Click microphone and speak naturally</p>
+                    </div>
+                </div>
+
+                <div id="stt-upload-view" style="display:none;">
+                    <div class="upload-dropzone" onclick="document.getElementById('audio-file-input').click()">
+                        <span class="upload-icon">📂</span>
+                        <p><strong>Click to browse</strong> or drag & drop</p>
+                        <span class="upload-hint">Supports MP3, WAV, M4A, OGG</span>
+                        <input type="file" id="audio-file-input" accept="audio/*" style="display:none;" onchange="handleAudioUpload(event)">
+                    </div>
+
+                    <div id="uploaded-audio-preview" style="display:none; margin: 15px 0;">
+                        <audio id="uploaded-player" controls style="width:100%;"></audio>
+                        <button class="generate-cta" style="margin-top:10px;" id="transcribe-file-btn" onclick="transcribeUploadedFile()">
+                            <span class="btn-text">⚡ Transcribe Uploaded File</span>
+                            <div class="spinner" id="upload-spinner"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="textarea-wrapper" style="margin-top:20px;">
+                    <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px; display:block;">Transcribed Text Output</label>
+                    <textarea id="stt-result-area" placeholder="Transcribed text will appear here..."></textarea>
+                </div>
+
+                <div class="stt-export-actions">
+                    <button class="export-btn" onclick="copySTT()">📋 Copy</button>
+                    <button class="export-btn" onclick="exportSTT('txt')">💾 .TXT</button>
+                    <button class="export-btn" onclick="exportSTT('srt')">🎬 .SRT (Subtitles)</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- History Drawer -->
+    <aside class="history-drawer" id="history-drawer">
+        <div class="drawer-header">
+            <h3>Audio History</h3>
+            <button class="close-drawer" onclick="toggleHistoryDrawer()">✕</button>
+        </div>
+        <div class="history-list" id="history-items">
+            <p class="empty-history">No generations yet.</p>
+        </div>
+        <button class="clear-history-btn" onclick="clearHistory()">Clear History</button>
+    </aside>
+
+    <script src="static/js/main.js"></script>
+</body>
+</html>
